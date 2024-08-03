@@ -1,6 +1,8 @@
 # Repo-Documenter
 
-Repo-Documenter is a PowerShell script that generates comprehensive documentation for a repository, including a tree view of the repository structure and the contents of specified files.
+Repo-Documenter is a PowerShell script that generates comprehensive documentation for a repository, including a tree view of the repository structure and the contents of specified files. The aggregated file is useful for code review, documentation, or use by an AI assistant.
+
+![screenshot](screenshot.png)
 
 ## Features
 
