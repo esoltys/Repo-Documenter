@@ -8,6 +8,7 @@ Repo-Documenter is a PowerShell script that generates comprehensive documentatio
 
 - Generates a tree view of the repository structure
 - Aggregates content from specified files
+- Safely handles binary files by excluding their content
 - Outputs a single Markdown file containing the repository documentation
 - Configurable via a simple configuration file
 
@@ -44,12 +45,20 @@ docs/*.txt
 
 This configuration will include all Markdown files, everything in the `src` directory, and all text files in the `docs` directory.
 
+## Binary File Handling
+
+The script now safely handles binary files:
+- Binary files (e.g., images, executables) are detected automatically.
+- Content of binary files is not included in the output to prevent corruption.
+- Binary files are listed in the repository structure but marked as binary in the file contents section.
+
 ## Output
 
 The script generates a Markdown file containing:
 
 1. A tree view of the repository structure (based on the configuration)
-2. The contents of all included files
+2. The contents of all included text files
+3. Placeholders for binary files
 
 ## License
 

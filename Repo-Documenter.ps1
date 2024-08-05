@@ -97,6 +97,33 @@ function Get-TreeView {
     return $treeView
 }
 
+function Test-IsBinaryFile {
+    param([string]$FilePath)
+    try {
+        $file = [System.IO.File]::OpenRead($FilePath)
+        $bytes = New-Object byte[] 1024
+        $bytesRead = $file.Read($bytes, 0, 1024)
+        $file.Close()
+        
+        if ($bytesRead -eq 0) {
+            return $false  # Empty file, treat as non-binary
+        }
+        
+        for ($i = 0; $i -lt $bytesRead; $i++) {
+            if ($bytes[$i] -eq 0) {
+                return $true  # File contains null byte, likely binary
+            }
+        }
+        
+        $nonPrintable = $bytes[0..($bytesRead-1)] | Where-Object { $_ -lt 32 -and $_ -ne 9 -and $_ -ne 10 -and $_ -ne 13 }
+        return ($nonPrintable.Count / $bytesRead) -gt 0.3  # More than 30% non-printable characters
+    }
+    catch {
+        Write-Host "Error checking file $FilePath : $_"
+        return $true  # Assume binary if we can't read the file
+    }
+}
+
 function Get-FileContents {
     param(
         [string]$Path,
@@ -107,15 +134,38 @@ function Get-FileContents {
     foreach ($item in $items) {
         if (Test-ConfigurationPath -Path $item.FullName -configurationPatterns $configurationPatterns) {
             $relativePath = $item.FullName.Substring($RepoPath.Length).TrimStart('\', '/').Replace('\', '/')
-            $fileContents += "### $relativePath"
-            $fileContents += $backticks
-            $extension = [System.IO.Path]::GetExtension($item.Name).TrimStart('.')
-            if ($extension) {
-                $fileContents[-1] = "$backticks$extension"
+            $fileContent = @()
+            $fileContent += "### $relativePath"
+            
+            if (Test-IsBinaryFile -FilePath $item.FullName) {
+                Write-Host "Skipping binary file: $relativePath"
+                $fileContent += "[Binary file content not included]"
+            } else {
+                $fileContent += $backticks
+                $extension = [System.IO.Path]::GetExtension($item.Name).TrimStart('.')
+                if ($extension) {
+                    $fileContent[-1] = "$backticks$extension"
+                }
+                
+                try {
+                    $content = Get-Content $item.FullName -Raw -ErrorAction Stop
+                    if ($content.Length -gt 1000000) {  # Limit to ~1MB of text
+                        $fileContent += $content.Substring(0, 1000000)
+                        $fileContent += "`n... [Content truncated due to length]"
+                    } else {
+                        $fileContent += $content
+                    }
+                }
+                catch {
+                    Write-Host "Error reading file $relativePath : $_"
+                    $fileContent += "[Error reading file content]"
+                }
+                
+                $fileContent += $backticks
             }
-            $fileContents += Get-Content $item.FullName
-            $fileContents += $backticks
-            $fileContents += ""
+            
+            $fileContent += ""
+            $fileContents += $fileContent
         }
     }
     return $fileContents
